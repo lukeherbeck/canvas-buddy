@@ -1,0 +1,127 @@
+:host {
+  all: initial;
+}
+
+.cb-search-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #00000080;
+  z-index: 1000000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20vh;
+  animation: cb-search-in 0.12s ease forwards;
+}
+
+@keyframes cb-search-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cb-search-box {
+  width: 480px;
+  max-width: 90vw;
+  background: #0e0e14;
+  border: 1px solid #3a3a58;
+  border-radius: 10px;
+  box-shadow: 0 8px 40px #00000090;
+  overflow: hidden;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.cb-search-input-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 10px;
+  border-bottom: 1px solid #1e1e2c;
+}
+
+.cb-search-icon {
+  color: #4a4a70;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.cb-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #d0d0e8;
+  font-size: 14px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.cb-search-input::placeholder {
+  color: #3a3a58;
+}
+
+.cb-search-hint {
+  font-size: 10px;
+  color: #3a3a58;
+  flex-shrink: 0;
+}
+
+.cb-search-results {
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a40 transparent;
+}
+
+.cb-search-result {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #14141e;
+  transition: background 0.08s;
+}
+
+.cb-search-result:hover,
+.cb-search-result.cb-focused {
+  background: #16162a;
+}
+
+.cb-result-name {
+  font-size: 12px;
+  color: #c8c8e8;
+}
+
+.cb-result-code {
+  font-size: 10px;
+  color: #4a4a70;
+  margin-top: 2px;
+}
+
+.cb-search-empty {
+  padding: 20px;
+  text-align: center;
+  color: #3a3a58;
+  font-size: 11px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.cb-search-footer {
+  padding: 8px 16px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid #1e1e2c;
+}
+
+.cb-key-hint {
+  font-size: 9px;
+  color: #3a3a58;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.cb-key {
+  background: #1e1e2c;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 9px;
+  color: #5a5a80;
+  display: inline-block;
+}

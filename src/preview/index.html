@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CanvasBuddy — UI Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Lato:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f5f5f5;
+      color: #2d3b45;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Canvas nav */
+    #mock-nav {
+      height: 56px;
+      background: #2d3b45;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 20px;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .nav-logo {
+      width: 36px;
+      height: 36px;
+      background: #e66000;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .nav-link {
+      color: #adb8c0;
+      font-size: 13px;
+      text-decoration: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: color 0.1s, background 0.1s;
+    }
+
+    .nav-link:hover { color: white; background: rgba(255,255,255,0.08); }
+    .nav-spacer { flex: 1; }
+
+    .nav-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e66000;
+      font-size: 13px;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Layout */
+    #layout {
+      display: flex;
+      padding-top: 56px;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 200px;
+      background: #394b58;
+      flex-shrink: 0;
+      padding: 12px 0;
+    }
+
+    .sidebar-item {
+      padding: 10px 20px;
+      color: #9aabb5;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .sidebar-item:hover { background: rgba(255,255,255,0.06); color: #d0dde5; }
+    .sidebar-item.active { background: rgba(255,255,255,0.12); color: white; }
+
+    .sidebar-icon {
+      width: 16px;
+      height: 16px;
+      background: currentColor;
+      border-radius: 3px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    /* Content */
+    #content {
+      flex: 1;
+      padding: 28px 40px;
+      /* leave room on right for dev panel */
+      padding-right: 268px;
+    }
+
+    .content-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2d3b45;
+      margin-bottom: 20px;
+    }
+
+    .mock-module {
+      background: white;
+      border: 1px solid #d7dde0;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .mock-module-header {
+      background: #394b58;
+      color: white;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 4px 4px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mock-module-badge {
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+    }
+
+    .mock-module-item {
+      padding: 11px 16px;
+      border-bottom: 1px solid #eef0f2;
+      font-size: 13px;
+      color: #2d3b45;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mock-module-item:last-child { border-bottom: none; }
+
+    .item-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00bcd4;
+      flex-shrink: 0;
+    }
+
+    .item-dot.assignment { background: #e66000; }
+    .item-dot.quiz { background: #9c27b0; }
+    .item-dot.lecture { background: #4caf50; }
+
+    /* ── Dev Controls ── */
+    #dev-controls {
+      position: fixed;
+      top: 64px;
+      right: 12px;
+      width: 248px;
+      background: #0c0c0f;
+      border: 1px solid #1e1e28;
+      border-radius: 10px;
+      z-index: 1000000;
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 11px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(100,255,128,0.06),
+        0 12px 40px rgba(0,0,0,0.7),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+
+    #dev-controls::-webkit-scrollbar { width: 4px; }
+    #dev-controls::-webkit-scrollbar-track { background: transparent; }
+    #dev-controls::-webkit-scrollbar-thumb { background: #2a2a38; border-radius: 2px; }
+
+    .dev-header {
+      background: #111118;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #1e1e28;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .dev-header-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #64ff80;
+      box-shadow: 0 0 6px #64ff80;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .dev-header-title {
+      color: #64ff80;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    .dev-section {
+      padding: 10px 12px;
+      border-bottom: 1px solid #111118;
+    }
+
+    .dev-section-label {
+      color: #3a3a50;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 7px;
+      font-weight: 700;
+    }
+
+    .dev-stat {
+      color: #555570;
+      font-size: 10px;
+      line-height: 2;
+    }
+
+    .dev-stat span { color: #b8b0e0; }
+    .dev-stat .val-name { color: #e8d5a0; }
+    .dev-stat .val-stage1 { color: #64c8ff; }
+    .dev-stat .val-stage2 { color: #a0e080; }
+    .dev-stat .val-stage3 { color: #ff9040; }
+
+    .dev-btn {
+      display: block;
+      width: 100%;
+      padding: 6px 8px;
+      background: #111118;
+      border: 1px solid #1e1e28;
+      color: #9090b0;
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 10px;
+      text-align: left;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      line-height: 1.4;
+    }
+
+    .dev-btn:last-child { margin-bottom: 0; }
+
+    .dev-btn:hover {
+      background: #18181f;
+      border-color: #30304a;
+      color: #d0d0f0;
+    }
+
+    .dev-btn:active {
+      background: #1e1e2a;
+    }
+
+    .dev-btn-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .dev-btn-row .dev-btn {
+      margin-bottom: 0;
+      text-align: center;
+      padding: 5px 4px;
+    }
+
+    .dev-btn-row-2 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .dev-btn-row-2 .dev-btn {
+      margin-bottom: 0;
+      text-align: center;
+      padding: 5px 4px;
+    }
+
+    .dev-btn.danger {
+      border-color: #2a1018;
+      color: #ff6060;
+    }
+
+    .dev-btn.danger:hover {
+      background: #1a0a10;
+      border-color: #ff3030;
+      color: #ff8080;
+    }
+
+    .dev-btn.success {
+      border-color: #0a2a14;
+      color: #40d060;
+    }
+
+    .dev-btn.success:hover {
+      background: #081a0d;
+      border-color: #30b050;
+      color: #60e080;
+    }
+
+    .dev-btn.accent {
+      border-color: #1a1a38;
+      color: #8080e0;
+    }
+
+    .dev-btn.accent:hover {
+      background: #101028;
+      border-color: #5050c0;
+      color: #a0a0ff;
+    }
+
+    .dev-divider {
+      height: 1px;
+      background: #111118;
+      margin: 0;
+    }
+
+    /* preview hint */
+    #preview-hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13,13,15,0.9);
+      border: 1px solid #1e1e28;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #444460;
+      pointer-events: none;
+      z-index: 999998;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Canvas nav mockup -->
+  <nav id="mock-nav">
+    <div class="nav-logo">C</div>
+    <a class="nav-link" href="#">Courses</a>
+    <a class="nav-link" href="#">Calendar</a>
+    <a class="nav-link" href="#">Inbox <span style="background:#e66000;border-radius:8px;padding:1px 5px;font-size:10px;color:white;margin-left:2px">3</span></a>
+    <div class="nav-spacer"></div>
+    <a class="nav-link" href="#">Help</a>
+    <div class="nav-avatar">L</div>
+  </nav>
+
+  <div id="layout">
+
+    <!-- Canvas sidebar mockup -->
+    <aside id="sidebar">
+      <div class="sidebar-item active">
+        <div class="sidebar-icon" style="border-radius:50%"></div>
+        Home
+      </div>
+      <div class="sidebar-item">
+        <div class="sidebar-icon"></div>
+        Assignments
+      </div>
+      <div class="sidebar-item">
+        <div class="sidebar-icon"></div>
+        Quizzes
+      </div>
+      <div class="sidebar-item">
+        <div class="sidebar-icon"></div>
+        Grades
+      </div>
+      <div class="sidebar-item">
+        <div class="sidebar-icon" style="border-radius:50%"></div>
+        Modules
+      </div>
+      <div class="sidebar-item">
+        <div class="sidebar-icon"></div>
+        Discussions
+      </div>
+      <div class="sidebar-item">
+        <div class="sidebar-icon"></div>
+        People
+      </div>
+    </aside>
+
+    <!-- Canvas content mockup -->
+    <main id="content">
+      <div class="content-title">CSCE 221 — Data Structures & Algorithms</div>
+
+      <div class="mock-module">
+        <div class="mock-module-header">
+          Week 7 — Trees &amp; Graphs
+          <span class="mock-module-badge">3 items</span>
+        </div>
+        <div class="mock-module-item"><div class="item-dot lecture"></div> Lecture Slides 7.1 — Binary Search Trees</div>
+        <div class="mock-module-item"><div class="item-dot assignment"></div> Homework 5 — Sorting Algorithms</div>
+        <div class="mock-module-item"><div class="item-dot quiz"></div> Quiz: Binary Search Trees</div>
+      </div>
+
+      <div class="mock-module">
+        <div class="mock-module-header">
+          Week 8 — Dynamic Programming
+          <span class="mock-module-badge">2 items</span>
+        </div>
+        <div class="mock-module-item"><div class="item-dot lecture"></div> Lecture Slides 8.1 — Memoization</div>
+        <div class="mock-module-item"><div class="item-dot assignment"></div> Problem Set 8</div>
+      </div>
+
+      <div class="mock-module">
+        <div class="mock-module-header">
+          Final Project
+          <span class="mock-module-badge">3 items</span>
+        </div>
+        <div class="mock-module-item"><div class="item-dot assignment"></div> Final Project Proposal</div>
+        <div class="mock-module-item"><div class="item-dot assignment"></div> Peer Review</div>
+        <div class="mock-module-item"><div class="item-dot assignment"></div> Final Report</div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Dev Controls -->
+  <div id="dev-controls">
+    <div class="dev-header">
+      <div class="dev-header-dot"></div>
+      <div class="dev-header-title">CanvasBuddy devtools</div>
+    </div>
+
+    <div class="dev-section">
+      <div class="dev-section-label">buddy state</div>
+      <div class="dev-stat" id="dev-stat-display">loading...</div>
+    </div>
+
+    <div class="dev-section">
+      <div class="dev-section-label">onboarding</div>
+      <button class="dev-btn danger" id="btn-reset">reset — show starter select</button>
+    </div>
+
+    <div class="dev-section">
+      <div class="dev-section-label">set level</div>
+      <div class="dev-btn-row">
+        <button class="dev-btn" data-level="1">1</button>
+        <button class="dev-btn" data-level="5">5</button>
+        <button class="dev-btn" data-level="9">9</button>
+        <button class="dev-btn" data-level="10">10</button>
+      </div>
+      <div class="dev-btn-row">
+        <button class="dev-btn" data-level="11">11</button>
+        <button class="dev-btn" data-level="19">19</button>
+        <button class="dev-btn" data-level="20">20</button>
+        <button class="dev-btn" data-level="25">25</button>
+      </div>
+    </div>
+
+    <div class="dev-section">
+      <div class="dev-section-label">xp &amp; level-up</div>
+      <button class="dev-btn accent" id="btn-near-levelup">set near level-up threshold</button>
+      <button class="dev-btn" id="btn-xp-10">+ 10 XP</button>
+      <button class="dev-btn success" id="btn-simulate-completion">simulate assignment completion</button>
+    </div>
+
+    <div class="dev-section">
+      <div class="dev-section-label">streak</div>
+      <div class="dev-btn-row-2">
+        <button class="dev-btn" data-streak="0">none</button>
+        <button class="dev-btn" data-streak="3">3 day</button>
+        <button class="dev-btn" data-streak="7">7 day</button>
+      </div>
+    </div>
+
+    <div class="dev-section">
+      <div class="dev-section-label">assignments</div>
+      <button class="dev-btn" id="btn-todo-normal">normal (5 items)</button>
+      <button class="dev-btn" id="btn-todo-overdue">with overdue items</button>
+      <button class="dev-btn" id="btn-todo-empty">empty list</button>
+    </div>
+  </div>
+
+  <div id="preview-hint">CanvasBuddy UI Preview — not a real Canvas page</div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

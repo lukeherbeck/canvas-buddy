@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
+    "dev:preview": "vite --port 5176",
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",

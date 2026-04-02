@@ -1,6 +1,6 @@
 import todoPanelCss from "../../styles/todo-panel.css?inline";
 import { BUDDY_DISPLAY_CSS, createBuddyDisplay } from "./buddy/buddy-display";
-import { renderStarterSelect } from "./buddy/starter-select";
+import { STARTER_SELECT_CSS, renderStarterSelect } from "./buddy/starter-select";
 import { loadBuddyState, saveBuddyState, processCompletions } from "./buddy/xp-sources";
 import { CanvasApi } from "../canvas-api";
 import type { BuddyState, StarterID } from "../../types/buddy";
@@ -44,7 +44,7 @@ function buildPanel(): HTMLElement {
   const shadow = host.attachShadow({ mode: "closed" });
 
   const style = document.createElement("style");
-  style.textContent = todoPanelCss + "\n" + BUDDY_DISPLAY_CSS;
+  style.textContent = todoPanelCss + "\n" + BUDDY_DISPLAY_CSS + "\n" + STARTER_SELECT_CSS;
   shadow.appendChild(style);
 
   const panel = document.createElement("div");
@@ -110,7 +110,7 @@ function buildPanel(): HTMLElement {
   function renderBuddy(state: BuddyState): void {
     buddyContainer.innerHTML = "";
     if (!state.chosen) {
-      renderStarterSelect(shadow, (starterId: StarterID, newState: BuddyState) => {
+      renderStarterSelect(buddyContainer, (starterId: StarterID, newState: BuddyState) => {
         buddyState = newState;
         renderBuddy(newState);
         void fetchData();

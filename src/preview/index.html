@@ -11,7 +11,7 @@
 
     body {
       font-family: 'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      background: #f5f5f5;
+      background: linear-gradient(135deg, #dde4f5 0%, #ede8f8 35%, #f5f0ff 65%, #e8f4fd 100%);
       color: #2d3b45;
       min-height: 100vh;
       overflow-x: hidden;
@@ -80,7 +80,7 @@
     /* Sidebar */
     #sidebar {
       width: 200px;
-      background: #394b58;
+      background: linear-gradient(180deg, #3d5268 0%, #2d3b45 100%);
       flex-shrink: 0;
       padding: 12px 0;
     }
@@ -124,15 +124,16 @@
     }
 
     .mock-module {
-      background: white;
-      border: 1px solid #d7dde0;
-      border-radius: 4px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(200,210,230,0.6);
+      border-radius: 8px;
       margin-bottom: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 10px rgba(99,102,241,0.06);
+      backdrop-filter: blur(6px);
     }
 
     .mock-module-header {
-      background: #394b58;
+      background: linear-gradient(90deg, #394b58, #4a5f72);
       color: white;
       padding: 12px 16px;
       font-size: 14px;

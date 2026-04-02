@@ -163,168 +163,170 @@ window.fetch = ((input: RequestInfo | URL, init?: RequestInit): Promise<Response
   return originalFetch(input, init);
 }) as typeof window.fetch;
 
-// ─── PANEL MOUNT ─────────────────────────────────────────────────────────────
-// Dynamic imports: browser.ts is now evaluated with our chrome mock in place.
+// ─── PANEL MOUNT + DEV CONTROLS ──────────────────────────────────────────────
+// Wrapped in async IIFE: top-level await is not supported in Safari's native
+// ES module engine when served by Vite dev. The chrome mock above must remain
+// synchronous at module top level so browser.ts captures it before any import.
 
-const [
-  { mountTodoPanel, unmountTodoPanel },
-  { saveBuddyState, loadBuddyState },
-  { applyXp, stageForLevel },
-] = await Promise.all([
-  import("../content/features/todo-panel"),
-  import("../content/features/buddy/xp-sources"),
-  import("../content/features/buddy/buddy-engine"),
-]);
+void (async () => {
+  const [
+    { mountTodoPanel, unmountTodoPanel },
+    { saveBuddyState, loadBuddyState },
+    { applyXp, stageForLevel },
+  ] = await Promise.all([
+    import("../content/features/todo-panel"),
+    import("../content/features/buddy/xp-sources"),
+    import("../content/features/buddy/buddy-engine"),
+  ]);
 
-mountTodoPanel();
-
-// ─── DEV CONTROLS ────────────────────────────────────────────────────────────
-
-function remount(): void {
-  unmountTodoPanel();
   mountTodoPanel();
-}
 
-function updateStats(): void {
-  const el = document.getElementById("dev-stat-display");
-  if (el === null) return;
-
-  const raw = lsGet("canvasbuddy_buddy") as BuddyState | undefined;
-
-  if (raw === undefined || !raw.chosen) {
-    el.innerHTML = '<span style="color:#333348">no buddy chosen yet</span>';
-    return;
+  function remount(): void {
+    unmountTodoPanel();
+    mountTodoPanel();
   }
 
-  const stageColors = ["val-stage1", "val-stage2", "val-stage3"] as const;
-  const stageClass = stageColors[(raw.evolutionStage - 1)] ?? "val-stage1";
-  const xpNeeded = raw.level * 100;
+  function updateStats(): void {
+    const el = document.getElementById("dev-stat-display");
+    if (el === null) return;
 
-  el.innerHTML = [
-    `name: <span class="val-name">${raw.name}</span>`,
-    `level: <span>${raw.level}</span>  stage: <span class="${stageClass}">${raw.evolutionStage}</span>`,
-    `xp: <span>${raw.xp} / ${xpNeeded}</span>`,
-    `streak: <span>${raw.streak}d</span>  done: <span>${raw.totalCompleted}</span>`,
-  ].join("<br>");
-}
+    const raw = lsGet("canvasbuddy_buddy") as BuddyState | undefined;
 
-// Set level
-document.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const level = parseInt(btn.dataset["level"] ?? "1", 10);
-    const existing = lsGet("canvasbuddy_buddy") as BuddyState | undefined;
-    if (existing === undefined || !existing.chosen) return;
+    if (raw === undefined || !raw.chosen) {
+      el.innerHTML = '<span style="color:#333348">no buddy chosen yet</span>';
+      return;
+    }
 
-    const updated: BuddyState = {
-      ...existing,
-      level,
-      xp: 0,
-      totalXp: existing.totalXp,
-      evolutionStage: stageForLevel(level),
-    };
-    lsSet("canvasbuddy_buddy", updated);
+    const stageColors = ["val-stage1", "val-stage2", "val-stage3"] as const;
+    const stageClass = stageColors[(raw.evolutionStage - 1)] ?? "val-stage1";
+    const xpNeeded = raw.level * 100;
+
+    el.innerHTML = [
+      `name: <span class="val-name">${raw.name}</span>`,
+      `level: <span>${raw.level}</span>  stage: <span class="${stageClass}">${raw.evolutionStage}</span>`,
+      `xp: <span>${raw.xp} / ${xpNeeded}</span>`,
+      `streak: <span>${raw.streak}d</span>  done: <span>${raw.totalCompleted}</span>`,
+    ].join("<br>");
+  }
+
+  // Set level
+  document.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const level = parseInt(btn.dataset["level"] ?? "1", 10);
+      const existing = lsGet("canvasbuddy_buddy") as BuddyState | undefined;
+      if (existing === undefined || !existing.chosen) return;
+
+      const updated: BuddyState = {
+        ...existing,
+        level,
+        xp: 0,
+        totalXp: existing.totalXp,
+        evolutionStage: stageForLevel(level),
+      };
+      lsSet("canvasbuddy_buddy", updated);
+      remount();
+      setTimeout(updateStats, 80);
+    });
+  });
+
+  // Set streak
+  document.querySelectorAll<HTMLButtonElement>("[data-streak]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const streak = parseInt(btn.dataset["streak"] ?? "0", 10);
+      void (async () => {
+        const state = await loadBuddyState();
+        if (!state.chosen) return;
+        await saveBuddyState({ ...state, streak });
+        remount();
+        setTimeout(updateStats, 80);
+      })();
+    });
+  });
+
+  // Reset to onboarding
+  document.getElementById("btn-reset")?.addEventListener("click", () => {
+    lsRemove("canvasbuddy_buddy");
     remount();
     setTimeout(updateStats, 80);
   });
-});
 
-// Set streak
-document.querySelectorAll<HTMLButtonElement>("[data-streak]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const streak = parseInt(btn.dataset["streak"] ?? "0", 10);
+  // Set XP to 5 below next level threshold (makes the next +10 XP trigger level-up in panel)
+  document.getElementById("btn-near-levelup")?.addEventListener("click", () => {
     void (async () => {
       const state = await loadBuddyState();
       if (!state.chosen) return;
-      await saveBuddyState({ ...state, streak });
+      const updated: BuddyState = { ...state, xp: state.level * 100 - 5 };
+      await saveBuddyState(updated);
       remount();
       setTimeout(updateStats, 80);
     })();
   });
-});
 
-// Reset to onboarding
-document.getElementById("btn-reset")?.addEventListener("click", () => {
-  lsRemove("canvasbuddy_buddy");
-  remount();
-  setTimeout(updateStats, 80);
-});
+  // Add 10 XP directly
+  document.getElementById("btn-xp-10")?.addEventListener("click", () => {
+    void (async () => {
+      const state = await loadBuddyState();
+      if (!state.chosen) return;
+      const { state: next } = applyXp(state, 10);
+      await saveBuddyState(next);
+      remount();
+      setTimeout(updateStats, 80);
+    })();
+  });
 
-// Set XP to 5 below next level threshold (makes the next +10 XP trigger level-up in panel)
-document.getElementById("btn-near-levelup")?.addEventListener("click", () => {
-  void (async () => {
-    const state = await loadBuddyState();
-    if (!state.chosen) return;
-    const updated: BuddyState = { ...state, xp: state.level * 100 - 5 };
-    await saveBuddyState(updated);
+  // Simulate a natural assignment completion:
+  // 1. Add a fake assignment to seenAssignments (panel will think it was "seen" previously)
+  // 2. Ensure the active todo list does NOT contain it (panel detects completion)
+  // 3. Panel runs processCompletions → awards XP → triggers level-up animation if applicable
+  let simulationCounter = 9000;
+  document.getElementById("btn-simulate-completion")?.addEventListener("click", () => {
+    void (async () => {
+      const state = await loadBuddyState();
+      if (!state.chosen) return;
+
+      simulationCounter -= 1;
+      const fakeId = simulationCounter;
+
+      const fakeAssignment = {
+        id: fakeId,
+        pointsPossible: 80,
+        dueAt: new Date(NOW + 7 * DAY).toISOString(),
+      };
+
+      // Add to seenAssignments but keep it out of the active todo preset
+      const updated: BuddyState = {
+        ...state,
+        seenAssignments: [
+          ...state.seenAssignments.filter((a) => a.id !== fakeId),
+          fakeAssignment,
+        ],
+      };
+      await saveBuddyState(updated);
+
+      // Make sure current todo preset doesn't include our fake id
+      // (normal/overdue/empty presets never use this id range, so no change needed)
+      remount();
+      setTimeout(updateStats, 80);
+    })();
+  });
+
+  // Todo presets
+  document.getElementById("btn-todo-normal")?.addEventListener("click", () => {
+    activeTodoPreset = "normal";
     remount();
-    setTimeout(updateStats, 80);
-  })();
-});
+  });
 
-// Add 10 XP directly
-document.getElementById("btn-xp-10")?.addEventListener("click", () => {
-  void (async () => {
-    const state = await loadBuddyState();
-    if (!state.chosen) return;
-    const { state: next } = applyXp(state, 10);
-    await saveBuddyState(next);
+  document.getElementById("btn-todo-overdue")?.addEventListener("click", () => {
+    activeTodoPreset = "overdue";
     remount();
-    setTimeout(updateStats, 80);
-  })();
-});
+  });
 
-// Simulate a natural assignment completion:
-// 1. Add a fake assignment to seenAssignments (panel will think it was "seen" previously)
-// 2. Ensure the active todo list does NOT contain it (panel detects completion)
-// 3. Panel runs processCompletions → awards XP → triggers level-up animation if applicable
-let simulationCounter = 9000;
-document.getElementById("btn-simulate-completion")?.addEventListener("click", () => {
-  void (async () => {
-    const state = await loadBuddyState();
-    if (!state.chosen) return;
-
-    simulationCounter -= 1;
-    const fakeId = simulationCounter;
-
-    const fakeAssignment = {
-      id: fakeId,
-      pointsPossible: 80,
-      dueAt: new Date(NOW + 7 * DAY).toISOString(),
-    };
-
-    // Add to seenAssignments but keep it out of the active todo preset
-    const updated: BuddyState = {
-      ...state,
-      seenAssignments: [
-        ...state.seenAssignments.filter((a) => a.id !== fakeId),
-        fakeAssignment,
-      ],
-    };
-    await saveBuddyState(updated);
-
-    // Make sure current todo preset doesn't include our fake id
-    // (normal/overdue/empty presets never use this id range, so no change needed)
+  document.getElementById("btn-todo-empty")?.addEventListener("click", () => {
+    activeTodoPreset = "empty";
     remount();
-    setTimeout(updateStats, 80);
-  })();
-});
+  });
 
-// Todo presets
-document.getElementById("btn-todo-normal")?.addEventListener("click", () => {
-  activeTodoPreset = "normal";
-  remount();
-});
-
-document.getElementById("btn-todo-overdue")?.addEventListener("click", () => {
-  activeTodoPreset = "overdue";
-  remount();
-});
-
-document.getElementById("btn-todo-empty")?.addEventListener("click", () => {
-  activeTodoPreset = "empty";
-  remount();
-});
-
-// Live stat display
-updateStats();
-setInterval(updateStats, 1000);
+  // Live stat display
+  updateStats();
+  setInterval(updateStats, 1000);
+})();

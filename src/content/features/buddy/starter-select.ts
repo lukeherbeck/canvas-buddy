@@ -9,61 +9,88 @@ export const STARTER_SELECT_CSS = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 12px 14px;
-    gap: 11px;
+    padding: 18px 12px 16px;
+    gap: 12px;
     width: 100%;
     box-sizing: border-box;
-    background: linear-gradient(160deg, #eef2ff 0%, #f3eeff 100%);
+    background: linear-gradient(160deg, #0f0c29 0%, #1e1b4b 45%, #12101f 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cb-starter-select::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 14% 24%, rgba(255,255,255,0.75) 0%, transparent 100%),
+      radial-gradient(1px 1px at 72% 14%, rgba(255,255,255,0.55) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 82% 58%, rgba(255,255,255,0.65) 0%, transparent 100%),
+      radial-gradient(1px 1px at 28% 80%, rgba(255,255,255,0.45) 0%, transparent 100%),
+      radial-gradient(1px 1px at 92% 38%, rgba(255,255,255,0.55) 0%, transparent 100%),
+      radial-gradient(1px 1px at 48% 52%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 76%, rgba(255,200,100,0.4) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 8% 45%, rgba(200,180,255,0.4) 0%, transparent 100%);
+    animation: cb-stars-twinkle 3.5s ease-in-out infinite alternate;
+    pointer-events: none;
   }
 
   .cb-starter-title {
-    font-size: 12px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-size: 18px;
+    font-weight: 400;
+    font-family: 'Bebas Neue', 'Nunito', sans-serif;
+    letter-spacing: 2.5px;
     text-align: center;
-    background: linear-gradient(90deg, #6366f1, #a78bfa);
+    background: linear-gradient(90deg, #f59e0b 0%, #f43f5e 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    font-family: 'Nunito', sans-serif;
+    position: relative;
+    z-index: 1;
   }
 
   .cb-starter-subtitle {
     font-size: 10px;
     font-weight: 600;
-    color: #a090c0;
+    color: rgba(255, 255, 255, 0.42);
     text-align: center;
-    margin-top: -6px;
+    margin-top: -8px;
+    position: relative;
+    z-index: 1;
   }
 
   .cb-starter-row {
     display: flex;
-    gap: 6px;
+    gap: 7px;
     justify-content: center;
+    position: relative;
+    z-index: 1;
   }
 
   .cb-starter-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 5px;
-    border: 2px solid rgba(200, 195, 250, 0.4);
+    padding: 10px 6px;
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     gap: 5px;
     transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-    width: 62px;
+    width: 66px;
   }
 
   .cb-starter-card:hover,
   .cb-starter-card.cb-focused {
-    border-color: #6366f1;
-    background: rgba(240, 238, 255, 0.9);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.22);
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    transform: translateY(-6px);
+    box-shadow:
+      0 12px 32px rgba(245, 158, 11, 0.32),
+      0 0 0 1px rgba(245, 158, 11, 0.4);
   }
 
   .cb-starter-sprite {
@@ -71,13 +98,13 @@ export const STARTER_SELECT_CSS = `
     height: 48px;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    filter: drop-shadow(0 3px 6px rgba(99,102,241,0.2));
+    filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.38));
   }
 
   .cb-starter-name {
-    font-size: 8px;
+    font-size: 8.5px;
     font-weight: 900;
-    color: #6366f1;
+    color: #fbbf24;
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -87,43 +114,47 @@ export const STARTER_SELECT_CSS = `
   .cb-starter-desc {
     font-size: 10px;
     font-weight: 600;
-    color: #8888b8;
+    color: rgba(255, 255, 255, 0.52);
     text-align: center;
     line-height: 1.45;
     min-height: 42px;
     padding: 0 4px;
+    position: relative;
+    z-index: 1;
   }
 
   .cb-choose-btn {
-    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    background: linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%);
     color: white;
     border: none;
     border-radius: 50px;
-    padding: 9px 22px;
+    padding: 10px 26px;
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     cursor: pointer;
     font-family: 'Nunito', sans-serif;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.38);
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 6px 22px rgba(245, 158, 11, 0.52);
+    position: relative;
+    z-index: 1;
   }
 
   .cb-choose-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 7px 22px rgba(99, 102, 241, 0.48);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 12px 30px rgba(244, 63, 94, 0.52);
   }
 
-  .cb-choose-btn:active { transform: translateY(0); }
+  .cb-choose-btn:active { transform: translateY(0) scale(0.97); }
 
   @keyframes cb-bounce {
     0%, 100% { transform: translateY(0); }
-    40%       { transform: translateY(-9px); }
-    65%       { transform: translateY(-4px); }
+    40%       { transform: translateY(-11px); }
+    65%       { transform: translateY(-5px); }
   }
 
-  .cb-bounce { animation: cb-bounce 0.45s ease 2; }
+  .cb-bounce { animation: cb-bounce 0.5s ease 2; }
 `;
 
 export function renderStarterSelect(
@@ -245,4 +276,3 @@ export function renderStarterSelect(
   updateFocus();
   container.appendChild(root);
 }
-

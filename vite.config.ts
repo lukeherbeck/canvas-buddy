@@ -1,15 +1,18 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 
+// Popup + Background build.
+// Both are loaded as ES modules (popup via <script type="module"> in HTML,
+// background via "type": "module" in manifest), so code splitting is fine.
 export default defineConfig({
   root: "src",
+  publicDir: "public",
   build: {
     outDir: "../dist",
     emptyOutDir: true,
     rollupOptions: {
       input: {
         background: resolve(__dirname, "src/background/service-worker.ts"),
-        content: resolve(__dirname, "src/content/index.ts"),
         popup: resolve(__dirname, "src/popup.html"),
       },
       output: {
@@ -22,5 +25,4 @@ export default defineConfig({
     sourcemap: false,
     target: "safari15",
   },
-  publicDir: "public",
 });

@@ -2,9 +2,11 @@ import todoPanelCss from "../../styles/todo-panel.css?inline";
 import { BUDDY_DISPLAY_CSS, createBuddyDisplay } from "./buddy/buddy-display";
 import { STARTER_SELECT_CSS, renderStarterSelect } from "./buddy/starter-select";
 import { loadBuddyState, saveBuddyState, processCompletions } from "./buddy/xp-sources";
+import { buildDailyQuests, getQuestLoadStateLabel } from "./daily-quests";
 import { CanvasApi } from "../canvas-api";
 import type { BuddyState, StarterID } from "../../types/buddy";
 import type { CanvasTodoItem, CanvasUpcomingEvent } from "../../types/canvas";
+import type { DailyQuest, QuestLoadState } from "./daily-quests";
 
 type PanelState =
   | { readonly status: "loading" }
@@ -19,7 +21,8 @@ const HOST_ID = "canvasbuddy-todo-host";
 let panelHost: HTMLElement | null = null;
 
 export function mountTodoPanel(): void {
-  if (panelHost !== null) return;
+  if (panelHost !== null && document.body.contains(panelHost)) return;
+  removeDomPanelHosts();
   panelHost = buildPanel();
   document.body.appendChild(panelHost);
 }
@@ -27,6 +30,19 @@ export function mountTodoPanel(): void {
 export function unmountTodoPanel(): void {
   panelHost?.remove();
   panelHost = null;
+  removeDomPanelHosts();
+}
+
+export function refreshBuddyPanel(): void {
+  if (panelHost === null) return;
+  unmountTodoPanel();
+  mountTodoPanel();
+}
+
+export function refreshTodoPanel(): void {
+  if (panelHost === null) return;
+  unmountTodoPanel();
+  mountTodoPanel();
 }
 
 function buildPanel(): HTMLElement {
@@ -34,10 +50,10 @@ function buildPanel(): HTMLElement {
   host.id = HOST_ID;
   Object.assign(host.style, {
     position: "fixed",
-    left: "16px",
+    right: "16px",
     top: "50%",
     transform: "translateY(-50%)",
-    zIndex: "999999",
+    zIndex: "2147483647",
     pointerEvents: "none",
   });
 
@@ -75,6 +91,10 @@ function buildPanel(): HTMLElement {
 
   const buddyContainer = document.createElement("div");
   panel.appendChild(buddyContainer);
+
+  const questArea = document.createElement("div");
+  questArea.className = "cb-quest-area";
+  panel.appendChild(questArea);
 
   const tabBar = document.createElement("div");
   tabBar.className = "cb-tab-bar";
@@ -229,6 +249,129 @@ function buildPanel(): HTMLElement {
     }
   }
 
+  function renderQuestSurface(): void {
+    questArea.innerHTML = "";
+
+    if (buddyState !== null && !buddyState.chosen) {
+      const locked = document.createElement("div");
+      locked.className = "cb-quest-locked";
+      const title = document.createElement("div");
+      title.className = "cb-quest-title";
+      title.textContent = "Quests unlock next";
+      locked.appendChild(title);
+
+      const note = document.createElement("div");
+      note.className = "cb-quest-note";
+      note.textContent = "Choose a buddy to turn today's Canvas work into XP.";
+      locked.appendChild(note);
+      questArea.appendChild(locked);
+      return;
+    }
+
+    const state = getQuestState();
+    const header = document.createElement("div");
+    header.className = "cb-quest-header";
+
+    const copy = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "cb-quest-title";
+    title.textContent = getQuestLoadStateLabel(state);
+    copy.appendChild(title);
+
+    const streak = document.createElement("div");
+    streak.className = "cb-quest-streak";
+    const streakCount = buddyState?.streak ?? 0;
+    streak.textContent = streakCount > 0 ? `${streakCount} day streak` : "Start a streak today";
+    copy.appendChild(streak);
+
+    header.appendChild(copy);
+
+    const recheck = document.createElement("button");
+    recheck.className = "cb-quest-recheck";
+    recheck.textContent = "Recheck";
+    recheck.addEventListener("click", () => {
+      panelState = { status: "loading" };
+      renderList();
+      renderQuestSurface();
+      void fetchData();
+    });
+    header.appendChild(recheck);
+    questArea.appendChild(header);
+
+    if (state.status === "loading") {
+      const loading = document.createElement("div");
+      loading.className = "cb-quest-note";
+      loading.textContent = "Syncing assignments and rewards.";
+      questArea.appendChild(loading);
+      return;
+    }
+
+    if (state.status === "error") {
+      const error = document.createElement("div");
+      error.className = "cb-quest-note cb-quest-error";
+      error.textContent = state.message;
+      questArea.appendChild(error);
+      return;
+    }
+
+    if (state.quests.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "cb-quest-note";
+      empty.textContent = "Canvas is clear. Keep the streak warm.";
+      questArea.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement("div");
+    list.className = "cb-quest-list";
+    for (const quest of state.quests) {
+      list.appendChild(renderQuest(quest));
+    }
+    questArea.appendChild(list);
+  }
+
+  function getQuestState(): QuestLoadState {
+    if (panelState.status === "loading") return { status: "loading" };
+    if (panelState.status === "error") return { status: "error", message: panelState.message };
+    return {
+      status: "loaded",
+      quests: buildDailyQuests(panelState.todoItems, buddyState?.streak ?? 0),
+    };
+  }
+
+  function renderQuest(quest: DailyQuest): HTMLElement {
+    const link = document.createElement("a");
+    link.className = `cb-quest-card cb-quest-${quest.urgency}`;
+    link.href = quest.href;
+    link.target = "_blank";
+    link.rel = "noopener";
+
+    const top = document.createElement("div");
+    top.className = "cb-quest-card-top";
+    const status = document.createElement("span");
+    status.className = "cb-quest-status";
+    status.textContent = quest.urgency === "overdue" ? "Overdue" : quest.urgency === "today" ? "Today" : "Quest";
+    top.appendChild(status);
+
+    const xp = document.createElement("span");
+    xp.className = "cb-quest-xp";
+    xp.textContent = `+${quest.projectedXp} XP`;
+    top.appendChild(xp);
+    link.appendChild(top);
+
+    const name = document.createElement("div");
+    name.className = "cb-quest-name";
+    name.textContent = quest.title;
+    link.appendChild(name);
+
+    const due = document.createElement("div");
+    due.className = "cb-quest-due";
+    due.textContent = quest.dueAt === null ? "No due date" : formatDate(quest.dueAt);
+    link.appendChild(due);
+
+    return link;
+  }
+
   function switchTab(tab: ActiveTab): void {
     activeTab = tab;
     assignmentsTab.classList.toggle("cb-active", tab === "assignments");
@@ -253,12 +396,14 @@ function buildPanel(): HTMLElement {
     if (!todoResult.ok) {
       panelState = { status: "error", message: `Could not load assignments: ${todoResult.error}` };
       renderList();
+      renderQuestSurface();
       return;
     }
 
     if (!eventsResult.ok) {
       panelState = { status: "error", message: `Could not load events: ${eventsResult.error}` };
       renderList();
+      renderQuestSurface();
       return;
     }
 
@@ -286,6 +431,7 @@ function buildPanel(): HTMLElement {
     }
 
     renderList();
+    renderQuestSurface();
   }
 
   refreshBtn.addEventListener("click", () => {
@@ -296,10 +442,15 @@ function buildPanel(): HTMLElement {
   loadBuddyState().then((state) => {
     buddyState = state;
     renderBuddy(state);
+    renderQuestSurface();
     if (state.chosen) void fetchData();
   }).catch(console.error);
 
   return host;
+}
+
+function removeDomPanelHosts(): void {
+  document.querySelectorAll(`#${HOST_ID}`).forEach((host) => host.remove());
 }
 
 function formatDate(iso: string): string {

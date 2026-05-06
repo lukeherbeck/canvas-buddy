@@ -163,7 +163,6 @@ describe("processCompletions", () => {
 
   it("retains seen assignments that are still in the todo list", () => {
     const a1 = makeAssignment({ id: 1 });
-    const a2 = makeAssignment({ id: 2 });
     const state = makeState({ seenAssignments: [makeCached(1), makeCached(2)] });
 
     // Only assignment 1 remains in todo; 2 is completed

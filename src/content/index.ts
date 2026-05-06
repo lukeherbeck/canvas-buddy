@@ -1,5 +1,5 @@
 import { loadSettings, watchSettings } from "./utils/settings";
-import { mountTodoPanel, unmountTodoPanel } from "./features/todo-panel";
+import { mountTodoPanel, refreshBuddyPanel, refreshTodoPanel, unmountTodoPanel } from "./features/todo-panel";
 import { mountSmartScroll, unmountSmartScroll } from "./features/smart-scroll";
 import { mountSearchBox, unmountSearchBox } from "./features/search-box";
 import { mountQuickInbox, unmountQuickInbox } from "./features/quick-inbox";
@@ -7,32 +7,57 @@ import { mountSpeedBoost, unmountSpeedBoost } from "./features/speed-boost";
 import { applyCustomColors, removeCustomColors } from "./features/custom-colors";
 import { applyRounderModules, removeRounderModules } from "./features/rounder-modules";
 import { applyTheme, removeTheme } from "./features/theme";
+import { isCanvasPage } from "./canvas-targets";
+import { recordDiagnostic } from "./diagnostics";
+import { handleExtensionMessage } from "./message-router";
+import { ext } from "../browser";
 import type { Settings } from "../types/settings";
 
-function isCanvasPage(): boolean {
-  const env = (window as unknown as { ENV?: { current_user_id?: unknown } }).ENV;
-  return env !== undefined && env.current_user_id !== undefined;
-}
+type WindowWithGuard = Window & { __canvasbuddyInit?: boolean };
 
-if (isCanvasPage()) {
-  void initialize();
+if (!(window as WindowWithGuard).__canvasbuddyInit) {
+  (window as WindowWithGuard).__canvasbuddyInit = true;
+
+  const canvasDetected = isCanvasPage();
+  recordDiagnostic({
+    contentRanAt: Date.now(),
+    canvasDetected,
+    settingsLoaded: false,
+    panelMounted: false,
+  });
+
+  if (canvasDetected) {
+    void initialize();
+  }
 }
 
 async function initialize(): Promise<void> {
-  const settings = await loadSettings();
-  applySettings(settings);
-  watchSettings(applySettings);
+  try {
+    const settings = await loadSettings();
+    recordDiagnostic({ settingsLoaded: true });
+    applySettings(settings);
+    watchSettings(applySettings);
+  } catch (err) {
+    recordDiagnostic({
+      lastError: err instanceof Error ? err.message : "Unknown initialization error",
+    });
+  }
 }
 
 function applySettings(settings: Settings): void {
   if (!settings.enabled) {
     teardownAll();
+    recordDiagnostic({ panelMounted: false });
     return;
   }
 
   applyTheme(settings.theme);
 
-  settings.rounderModules ? applyRounderModules() : removeRounderModules();
+  if (settings.rounderModules) {
+    applyRounderModules();
+  } else {
+    removeRounderModules();
+  }
 
   if (settings.customColors.enabled) {
     applyCustomColors(settings.customColors);
@@ -40,11 +65,36 @@ function applySettings(settings: Settings): void {
     removeCustomColors();
   }
 
-  settings.todoPanel ? mountTodoPanel() : unmountTodoPanel();
-  settings.smartScrolling ? mountSmartScroll() : unmountSmartScroll();
-  settings.searchBox ? mountSearchBox() : unmountSearchBox();
-  settings.quickInbox ? mountQuickInbox() : unmountQuickInbox();
-  settings.speedBoost ? mountSpeedBoost() : unmountSpeedBoost();
+  if (settings.todoPanel) {
+    mountTodoPanel();
+  } else {
+    unmountTodoPanel();
+  }
+
+  if (settings.smartScrolling) {
+    mountSmartScroll();
+  } else {
+    unmountSmartScroll();
+  }
+
+  if (settings.searchBox) {
+    mountSearchBox();
+  } else {
+    unmountSearchBox();
+  }
+
+  if (settings.quickInbox) {
+    mountQuickInbox();
+  } else {
+    unmountQuickInbox();
+  }
+
+  if (settings.speedBoost) {
+    mountSpeedBoost();
+  } else {
+    unmountSpeedBoost();
+  }
+  recordDiagnostic({ panelMounted: settings.todoPanel });
 }
 
 function teardownAll(): void {
@@ -57,3 +107,11 @@ function teardownAll(): void {
   unmountQuickInbox();
   unmountSpeedBoost();
 }
+
+ext.runtime.onMessage.addListener((message: unknown) => {
+  return handleExtensionMessage(message, {
+    applySettings,
+    refreshBuddyPanel,
+    refreshTodoPanel,
+  });
+});

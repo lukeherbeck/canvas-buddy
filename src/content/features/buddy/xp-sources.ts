@@ -7,34 +7,42 @@ import { ext } from "../../../browser";
 const STORAGE_KEY = "canvasbuddy_buddy";
 
 export async function loadBuddyState(): Promise<BuddyState> {
+  if (typeof ext.storage?.local?.get !== "function") return defaultBuddyState();
+
   return new Promise((resolve) => {
     ext.storage.local.get(STORAGE_KEY, (result) => {
       const stored = (result as Record<string, unknown>)[STORAGE_KEY] as BuddyState | undefined;
       if (stored !== undefined) {
         resolve(stored);
       } else {
-        resolve({
-          chosen: false,
-          starterId: "inklet",
-          name: "Inklet",
-          level: 1,
-          xp: 0,
-          totalXp: 0,
-          evolutionStage: 1,
-          streak: 0,
-          lastActivityDate: "",
-          seenAssignments: [],
-          totalCompleted: 0,
-        });
+        resolve(defaultBuddyState());
       }
     });
   });
 }
 
 export async function saveBuddyState(state: BuddyState): Promise<void> {
+  if (typeof ext.storage?.local?.set !== "function") return;
+
   return new Promise((resolve) => {
     ext.storage.local.set({ [STORAGE_KEY]: state }, resolve);
   });
+}
+
+function defaultBuddyState(): BuddyState {
+  return {
+    chosen: false,
+    starterId: "inklet",
+    name: "Inklet",
+    level: 1,
+    xp: 0,
+    totalXp: 0,
+    evolutionStage: 1,
+    streak: 0,
+    lastActivityDate: "",
+    seenAssignments: [],
+    totalCompleted: 0,
+  };
 }
 
 export function todayDateString(): string {

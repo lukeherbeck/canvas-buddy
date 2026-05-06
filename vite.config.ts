@@ -1,9 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 
-// Popup + Background build.
-// Both are loaded as ES modules (popup via <script type="module"> in HTML,
-// background via "type": "module" in manifest), so code splitting is fine.
+// Popup build. Content scripts are built separately as a self-contained IIFE.
 export default defineConfig({
   root: "src",
   publicDir: "public",
@@ -12,7 +10,6 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        background: resolve(__dirname, "src/background/service-worker.ts"),
         popup: resolve(__dirname, "src/popup.html"),
       },
       output: {

@@ -1,10 +1,10 @@
 :host {
   all: initial;
   position: fixed;
-  left: 16px;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 999999;
+  z-index: 2147483647;
   font-family: 'Nunito', 'Varela Round', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --cb-amber: #f59e0b;
   --cb-amber-light: #fbbf24;
@@ -126,6 +126,158 @@
 }
 
 .cb-tab:hover:not(.cb-active) { color: #b8a080; }
+
+.cb-quest-area {
+  padding: 11px 12px 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 235, 0.82), rgba(255, 253, 245, 0.6)),
+    radial-gradient(circle at 12% 0%, rgba(245, 158, 11, 0.18), transparent 42%);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.14);
+}
+
+.cb-quest-locked {
+  display: grid;
+  gap: 8px;
+}
+
+.cb-quest-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cb-quest-title {
+  font-family: 'Bebas Neue', 'Nunito', sans-serif;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 1.6px;
+  color: #2b1705;
+}
+
+.cb-quest-streak {
+  margin-top: 3px;
+  color: #a16207;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.cb-quest-recheck {
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  background: rgba(245, 158, 11, 0.08);
+  color: #b45309;
+  border-radius: 8px;
+  padding: 5px 7px;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  transition: transform 0.16s var(--cb-spring), background 0.16s, color 0.16s;
+}
+
+.cb-quest-recheck:hover {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+  transform: translateY(-1px);
+}
+
+.cb-quest-note {
+  border: 1px dashed rgba(245, 158, 11, 0.22);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #9a6b28;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.cb-quest-error {
+  border-color: rgba(244, 63, 94, 0.28);
+  color: #be123c;
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.cb-quest-list {
+  display: grid;
+  gap: 6px;
+}
+
+.cb-quest-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(245, 158, 11, 0.16);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition: transform 0.16s var(--cb-spring), border-color 0.16s, background 0.16s;
+}
+
+.cb-quest-card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(245, 158, 11, 0.38);
+  transform: translateX(2px);
+}
+
+.cb-quest-overdue {
+  border-color: rgba(244, 63, 94, 0.34);
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.12), rgba(255, 255, 255, 0.72));
+}
+
+.cb-quest-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.cb-quest-status,
+.cb-quest-xp {
+  font-size: 8.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.cb-quest-status {
+  color: #b45309;
+}
+
+.cb-quest-overdue .cb-quest-status {
+  color: #e11d48;
+}
+
+.cb-quest-xp {
+  color: #78350f;
+  background: rgba(251, 191, 36, 0.22);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.cb-quest-name {
+  color: #221407;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.25;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cb-quest-due {
+  margin-top: 2px;
+  color: #9a6b28;
+  font-size: 9.5px;
+  font-weight: 800;
+}
 
 .cb-list-area {
   overflow-y: auto;

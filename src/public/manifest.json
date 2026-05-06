@@ -1,17 +1,13 @@
 {
   "manifest_version": 3,
   "name": "CanvasBuddy",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Level up your Canvas experience with a companion that grows as you complete assignments.",
-  "permissions": ["storage", "alarms", "activeTab"],
-  "host_permissions": ["*://*/*"],
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.instructure.com/*", "https://canvas.tamu.edu/*"],
   "content_scripts": [
     {
-      "matches": ["*://*/*"],
+      "matches": ["https://*.instructure.com/*", "https://canvas.tamu.edu/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
@@ -31,5 +27,11 @@
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["sprites/*.png"],
+      "matches": ["https://*.instructure.com/*", "https://canvas.tamu.edu/*"]
+    }
+  ]
 }

@@ -2,8 +2,13 @@ import type { Settings, ThemeMode } from "../types/settings";
 import type { BuddyState } from "../types/buddy";
 import { DEFAULT_SETTINGS } from "../types/settings";
 import { STARTERS } from "../types/buddy";
+import { loadDiagnostics } from "../content/diagnostics";
+import { applyXp, xpToNextLevel } from "../content/features/buddy/buddy-engine";
 import { debounce } from "../content/utils/debounce";
+import { DEV_TOOLS_STORAGE_KEY, shouldShowDevTools } from "./dev-tools";
+import { buildPopupHealthSummary } from "./status-copy";
 import { ext } from "../browser";
+import type { ContentDiagnostics } from "../content/diagnostics";
 
 const hasExtApi = typeof ext.storage?.sync?.get === "function";
 
@@ -25,10 +30,7 @@ async function loadSettings(): Promise<Settings> {
 async function saveSettings(settings: Settings): Promise<void> {
   if (!hasExtApi) return;
   return new Promise((resolve) => {
-    ext.storage.sync.set({ canvasbuddy_settings: settings }, () => {
-      notifyContentScript(settings);
-      resolve();
-    });
+    ext.storage.sync.set({ canvasbuddy_settings: settings }, resolve);
   });
 }
 
@@ -42,12 +44,19 @@ async function loadBuddyState(): Promise<BuddyState | null> {
   });
 }
 
-function notifyContentScript(settings: Settings): void {
-  ext.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
-    if (tab?.id !== undefined) {
-      ext.tabs.sendMessage(tab.id, { type: "SETTINGS_UPDATED", settings }).catch(() => void 0);
-    }
+async function saveBuddyState(state: BuddyState): Promise<void> {
+  if (!hasExtApi) return;
+  return new Promise((resolve) => {
+    ext.storage.local.set({ canvasbuddy_buddy: state }, resolve);
+  });
+}
+
+async function loadDevToolsPreference(): Promise<boolean> {
+  if (!hasExtApi || typeof ext.storage?.local?.get !== "function") return false;
+  return new Promise((resolve) => {
+    ext.storage.local.get(DEV_TOOLS_STORAGE_KEY, (result) => {
+      resolve((result as Record<string, unknown>)[DEV_TOOLS_STORAGE_KEY] === true);
+    });
   });
 }
 
@@ -94,10 +103,69 @@ function makeToggleRow(
   return row;
 }
 
+function makeHealthCard(
+  diagnostics: ContentDiagnostics | null,
+  settings: Settings,
+  buddyState: BuddyState | null
+): HTMLElement {
+  const summary = buildPopupHealthSummary({ diagnostics, settings, buddyState });
+  const card = document.createElement("section");
+  card.className = "cb-health-card";
+
+  const eyebrow = document.createElement("div");
+  eyebrow.className = "cb-health-eyebrow";
+  eyebrow.textContent = "Live Canvas status";
+  card.appendChild(eyebrow);
+
+  const title = document.createElement("div");
+  title.className = "cb-health-title";
+  title.textContent = summary.title;
+  card.appendChild(title);
+
+  const rows = document.createElement("div");
+  rows.className = "cb-health-rows";
+  for (const row of summary.rows) {
+    rows.appendChild(makeHealthRow(row.label, row.value, row.active));
+  }
+  card.appendChild(rows);
+
+  const trust = document.createElement("div");
+  trust.className = "cb-trust-strip";
+  trust.textContent = summary.trustMessage;
+  card.appendChild(trust);
+
+  return card;
+}
+
+function makeHealthRow(label: string, value: string, active: boolean): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "cb-health-row";
+
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+  row.appendChild(labelEl);
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "cb-health-value" + (active ? " cb-active" : "");
+  valueEl.textContent = value;
+  row.appendChild(valueEl);
+
+  return row;
+}
+
 async function render(): Promise<void> {
-  const [settings, buddyState] = await Promise.all([loadSettings(), loadBuddyState()]);
+  const [settings, buddyState, diagnostics, devToolsPreference] = await Promise.all([
+    loadSettings(),
+    loadBuddyState(),
+    loadDiagnostics(),
+    loadDevToolsPreference(),
+  ]);
 
   let current = settings;
+  const devToolsEnabled = shouldShowDevTools({
+    viteDev: import.meta.env.DEV,
+    storedPreference: devToolsPreference,
+  });
 
   const app = document.getElementById("app");
   if (app === null) return;
@@ -105,7 +173,14 @@ async function render(): Promise<void> {
 
   const header = document.createElement("div");
   header.className = "cb-popup-header";
-  header.innerHTML = `<span class="cb-popup-logo">CanvasBuddy</span><span class="cb-popup-version">v1.0.0</span>`;
+  const logo = document.createElement("span");
+  logo.className = "cb-popup-logo";
+  logo.textContent = "CanvasBuddy";
+  header.appendChild(logo);
+  const version = document.createElement("span");
+  version.className = "cb-popup-version";
+  version.textContent = "v0.1 beta";
+  header.appendChild(version);
   app.appendChild(header);
 
   const globalRow = document.createElement("div");
@@ -131,6 +206,8 @@ async function render(): Promise<void> {
     current = { ...current, enabled: globalInput.checked };
     void saveSettings(current);
   });
+
+  app.appendChild(makeHealthCard(diagnostics, current, buddyState));
 
   const appearanceLabel = document.createElement("div");
   appearanceLabel.className = "cb-section-label";
@@ -235,6 +312,62 @@ async function render(): Promise<void> {
     }));
   }
 
+  if (devToolsEnabled) {
+    const devSection = document.createElement("div");
+    devSection.className = "cb-dev-section";
+
+    const devLabel = document.createElement("div");
+    devLabel.className = "cb-dev-label";
+    devLabel.textContent = "Dev Tools";
+    devSection.appendChild(devLabel);
+
+    const diag = document.createElement("div");
+    diag.className = "cb-dev-diagnostics";
+    diag.textContent = diagnostics === null
+      ? "No content diagnostics yet"
+      : `Canvas ${diagnostics.canvasDetected === true ? "yes" : "no"} - Settings ${diagnostics.settingsLoaded === true ? "yes" : "no"} - Panel ${diagnostics.panelMounted === true ? "yes" : "no"}`;
+    devSection.appendChild(diag);
+
+    if (buddyState !== null && buddyState.chosen) {
+      const xpLabel = document.createElement("div");
+      xpLabel.className = "cb-dev-sublabel";
+      xpLabel.textContent = "Add XP";
+      devSection.appendChild(xpLabel);
+
+      const xpRow = document.createElement("div");
+      xpRow.className = "cb-dev-row";
+      for (const amount of [10, 50, 100, 500]) {
+        const btn = document.createElement("button");
+        btn.className = "cb-dev-btn";
+        btn.textContent = `+${amount}`;
+        btn.addEventListener("click", async () => {
+          const fresh = await loadBuddyState();
+          if (fresh === null || !fresh.chosen) return;
+          const { state: newState } = applyXp(fresh, amount);
+          await saveBuddyState(newState);
+          void render();
+        });
+        xpRow.appendChild(btn);
+      }
+      devSection.appendChild(xpRow);
+
+      const levelBtn = document.createElement("button");
+      levelBtn.className = "cb-dev-btn cb-dev-full";
+      levelBtn.textContent = "Level Up";
+      levelBtn.addEventListener("click", async () => {
+        const fresh = await loadBuddyState();
+        if (fresh === null || !fresh.chosen) return;
+        const needed = xpToNextLevel(fresh.level) - fresh.xp;
+        const { state: newState } = applyXp(fresh, needed);
+        await saveBuddyState(newState);
+        void render();
+      });
+      devSection.appendChild(levelBtn);
+    }
+
+    app.appendChild(devSection);
+  }
+
   if (buddyState !== null && buddyState.chosen) {
     const stats = document.createElement("div");
     stats.className = "cb-buddy-stats";
@@ -256,7 +389,14 @@ async function render(): Promise<void> {
     for (const [label, val] of statRows) {
       const row = document.createElement("div");
       row.className = "cb-buddy-stat-row";
-      row.innerHTML = `<span>${label}</span><span class="cb-buddy-stat-val">${val}</span>`;
+      const labelEl = document.createElement("span");
+      labelEl.textContent = label;
+      row.appendChild(labelEl);
+
+      const valueEl = document.createElement("span");
+      valueEl.className = "cb-buddy-stat-val";
+      valueEl.textContent = val;
+      row.appendChild(valueEl);
       stats.appendChild(row);
     }
 
@@ -276,4 +416,6 @@ async function render(): Promise<void> {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => void render());
+document.addEventListener("DOMContentLoaded", () => {
+  void render();
+});
